@@ -1045,10 +1045,23 @@ app.get('/cierre-diario', async (req, res) => {
       ? rows.filter(row => tList.includes(row.BeginStr))
       : rows;
 
+    // ✅ Normalizar filas para garantizar consistencia
+    const rowsNormalizados = filasFiltradas.map(row => ({
+      Tipo: row.Tipo || '',
+      GrupoCobro: row.GrupoCobro || '',
+      SeriesName: row.SeriesName || '',
+      NumPago: row.NumPago || '',
+      Fact: row.Fact || '',
+      FechaPago: row.FechaPago || '',
+      CardName: row.CardName || '',
+      Importe: parseFloat(row.Importe) || 0,
+      Banco: row.Banco || ''
+    }));
+
     // Agrupar por tipo de pago
     const pagos = {};
     let totalGeneral = 0;
-    filasFiltradas.forEach(row => {
+    rowsNormalizados.forEach(row => {
       const tipo = row.Tipo;
       if (!pagos[tipo]) pagos[tipo] = [];
       pagos[tipo].push(row);
