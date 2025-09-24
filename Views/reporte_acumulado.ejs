@@ -1,0 +1,169 @@
+<!-- views/reporte_acumulado.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📈 Reporte Acumulado por Asesor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+  <style>
+    .filters { background: white; padding: 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .totales { background: #003366; color: white; font-weight: bold; }
+    .resumen-section { margin-top: 30px; }
+    .table th, .table td { vertical-align: middle; text-align: right; }
+    .table th:first-child, .table td:first-child,
+    .table th:nth-child(2), .table td:nth-child(2) { text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>📈 Reporte Acumulado por Asesor</h1>
+      <a href="/" class="btn btn-outline-primary">← Volver al inicio</a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters">
+      <form method="GET" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Fecha Inicio</label>
+          <input type="date" name="fechaInicio" class="form-control" value="<%= fi %>" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fecha Fin</label>
+          <input type="date" name="fechaFin" class="form-control" value="<%= ff %>" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Sucursales</label>
+          <div class="row">
+            <% sucursalesRows.forEach(s => { %>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="sucursales" value="<%= s.BeginStr %>" <%= sucList.includes(s.BeginStr) ? 'checked' : '' %> id="sucursal_<%= s.BeginStr %>">
+                <label class="form-check-label" for="sucursal_<%= s.BeginStr %>"><%= s.SeriesName %></label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Vendedores</label>
+          <div class="row" style="max-height: 150px; overflow-y: auto;">
+            <% vendedoresRows.forEach(v => { %>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="vendedores" value="<%= v.SlpCode %>" <%= vendList.includes(v.SlpCode.toString()) ? 'checked' : '' %> id="vendedor_<%= v.SlpCode %>">
+                <label class="form-check-label" for="vendedor_<%= v.SlpCode %>"><%= v.SlpName %></label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Filtrar</button>
+          <button type="button" class="btn btn-success" onclick="exportarExcel()">Exportar a Excel</button>
+          <button type="button" class="btn btn-secondary" onclick="imprimir()">Imprimir</button>
+          <button type="button" class="btn btn-danger" onclick="exportarPDF()">Exportar a PDF</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabla de Resultados -->
+    <div class="table-responsive">
+      <table id="tablaReporte" class="table table-striped table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>Sucursal</th>
+            <th>Asesor</th>
+            <th>Valor Ofertas</th>
+            <th>Valor Pedidos (No Cancelados)</th>
+            <th>Valor Pedidos Confirmados</th>
+            <th>Valor Facturación</th>
+            <th>Valor Facturación - Notas de Crédito</th>
+            <th>Valor Notas de Crédito</th>
+            <th>Cobro por Asesor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (rows && rows.length > 0) { %>
+            <% rows.forEach(row => { %>
+              <tr>
+                <td><%= row.SUCURSAL || '' %></td>
+                <td><%= row.Asesor || '' %></td>
+                <td><%= parseFloat(row["VALOR OFERTAS"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["Valor Pedidos (No Cancelados)"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["Valor Pedidos Confirmados"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["VALOR FACTURACIÓN"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["VALOR FACTURACIÓN - NOTAS DE CREDITO"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["VALOR NOTAS DE CREDITO"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+                <td><%= parseFloat(row["Cobro por Asesor"] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="9" class="text-center">No se encontraron resultados.</td>
+            </tr>
+          <% } %>
+        </tbody>
+
+        <!-- Pie de Tabla con Totales -->
+        <% if (rows && rows.length > 0) { %>
+          <tfoot>
+            <tr class="totales">
+              <td colspan="2" align="right"><strong>TOTALES GENERALES →</strong></td>
+              <td><strong><%= parseFloat(totalOfertas).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalPedidosNoCancelados).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalPedidosConfirmados).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalFacturacion).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalFacturacionNotasCredito).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalNotasCredito).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+              <td><strong><%= parseFloat(totalCobroAsesor).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></strong></td>
+            </tr>
+          </tfoot>
+        <% } %>
+      </table>
+    </div>
+
+    <!-- Sección de Resumen -->
+    <div class="resumen-section">
+      <div class="card">
+        <div class="card-header">
+          <h5>📊 Resumen General</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <h6>Métricas Totales</h6>
+              <ul class="list-group">
+                <li class="list-group-item">Valor Ofertas: <%= parseFloat(totalOfertas).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+                <li class="list-group-item">Valor Pedidos No Cancelados: <%= parseFloat(totalPedidosNoCancelados).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+                <li class="list-group-item">Valor Pedidos Confirmados: <%= parseFloat(totalPedidosConfirmados).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+              </ul>
+            </div>
+            <div class="col-md-4">
+              <h6>Facturación</h6>
+              <ul class="list-group">
+                <li class="list-group-item">Valor Facturación Bruta: <%= parseFloat(totalFacturacion).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+                <li class="list-group-item">Valor Facturación Neta: <%= parseFloat(totalFacturacionNotasCredito).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+                <li class="list-group-item">Valor Notas de Crédito: <%= parseFloat(totalNotasCredito).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+              </ul>
+            </div>
+            <div class="col-md-4">
+              <h6>Cobros</h6>
+              <ul class="list-group">
+                <li class="list-group-item">Cobro por Asesor: <%= parseFloat(totalCobroAsesor).toLocaleString(undefined, { minimumFractionDigits: 2 }) %></li>
+                <li class="list-group-item">Registros Únicos: <%= rows.length %></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="/scripts.js"></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!-- views/reporte_diario.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📄 Reporte Diario de Pedidos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+  <style>
+    .filters { background: white; padding: 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .totales { background: #003366; color: white; font-weight: bold; }
+    .table-container { overflow-x: auto; }
+    .resumen-section { margin-top: 30px; }
+    .table th, .table td { vertical-align: middle; text-align: right; }
+    .table th:first-child, .table td:first-child,
+    .table th:nth-child(2), .table td:nth-child(2),
+    .table th:nth-child(3), .table td:nth-child(3),
+    .table th:nth-child(11), .table td:nth-child(11),
+    .table th:nth-child(12), .table td:nth-child(12),
+    .table th:nth-child(13), .table td:nth-child(13) { text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>📄 Reporte Diario de Pedidos</h1>
+      <a href="/" class="btn btn-outline-primary">← Volver al inicio</a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters">
+      <form method="GET" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Fecha Inicio</label>
+          <input type="date" name="fechaInicio" class="form-control" value="<%= fi %>" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fecha Fin</label>
+          <input type="date" name="fechaFin" class="form-control" value="<%= ff %>" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tiendas</label>
+          <div class="row">
+            <% tiendasRows.forEach(t => { %>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="tiendas" value="<%= t.BeginStr %>" <%= tList.includes(t.BeginStr) ? 'checked' : '' %> id="tienda_<%= t.BeginStr %>">
+                <label class="form-check-label" for="tienda_<%= t.BeginStr %>"><%= t.SeriesName %></label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Asesores</label>
+          <div class="row" style="max-height: 150px; overflow-y: auto;">
+            <% asesoresRows.forEach(a => { %>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="asesores" value="<%= a.SlpCode %>" <%= aList.includes(a.SlpCode.toString()) ? 'checked' : '' %> id="asesor_<%= a.SlpCode %>">
+                <label class="form-check-label" for="asesor_<%= a.SlpCode %>"><%= a.SlpName %></label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cumple Condición</label>
+          <select name="cumpleCondicion" class="form-select">
+            <option value="">Todos</option>
+            <option value="SI" <%= cumple === 'SI' ? 'selected' : '' %>>Sí</option>
+            <option value="NO" <%= cumple === 'NO' ? 'selected' : '' %>>No</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Filtrar</button>
+          <button type="button" class="btn btn-success" onclick="exportarExcel()">Exportar a Excel</button>
+          <button type="button" class="btn btn-secondary" onclick="imprimir()">Imprimir</button>
+          <button type="button" class="btn btn-danger" onclick="exportarPDF()">Exportar a PDF</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tabla de Resultados -->
+    <div class="table-container">
+      <table id="tablaReporte" class="table table-striped table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>Tienda</th>
+            <th>Tipo</th>
+            <th>Cliente</th>
+            <th>N° Pedido</th>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th>Cant</th>
+            <th>% Dcto</th>
+            <th>Valor Venta</th>
+            <th>Total Pedido</th>
+            <th>Asesor</th>
+            <th>Tipo Pago</th>
+            <th>Cumple?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (rows && rows.length > 0) { %>
+            <% rows.forEach(row => { %>
+              <tr>
+                <td><%= row.Tienda || '' %></td>
+                <td><%= row.Tipo || '' %></td>
+                <td><%= row["Nombre de cliente"] || '' %></td>
+                <td><%= row["N° pedido"] || '' %></td>
+                <td><%= row["Código del Producto"] || '' %></td>
+                <td><%= row["Descripción Articulo"] || '' %></td>
+                <td><%= parseFloat(row.Cantidad || 0).toLocaleString() %></td>
+                <td><%= parseFloat(row["% Descuento"] || 0).toFixed(2) %> %</td>
+                <td><%= parseFloat(row["Valor Venta"] || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) %></td>
+                <td><%= parseFloat(row["Valor Pedido (Cabecera)"] || 0).toLocaleString(undefined, {minimumFractionDigits: 2}) %></td>
+                <td><%= row.Asesor || '' %></td>
+                <td><%= row["Tipo Pago"] || '' %></td>
+                <td><strong><%= row["CumpleCondicion"] || '' %></strong></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="13" class="text-center">No se encontraron resultados.</td>
+            </tr>
+          <% } %>
+        </tbody>
+
+        <!-- Pie de Tabla con Totales -->
+        <% if (rows && rows.length > 0) { %>
+          <tfoot>
+            <tr class="totales">
+              <td colspan="6"><strong>TOTALES GENERALES →</strong></td>
+              <td><strong><%= totalCantidad.toLocaleString() %></strong></td>
+              <td><strong><%= promedioDescuento.toFixed(2) %> %</strong></td>
+              <td><strong><%= totalValorVenta.toLocaleString(undefined, {minimumFractionDigits: 2}) %></strong></td>
+              <td><strong><%= totalValorPedido.toLocaleString(undefined, {minimumFractionDigits: 2}) %></strong></td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        <% } %>
+      </table>
+    </div>
+
+    <!-- Sección de Resumen -->
+    <div class="resumen-section">
+      <div class="card">
+        <div class="card-header">
+          <h5>📊 Estadísticas</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Número de Clientes únicos:</strong> <%= clientesUnicos %></li>
+            <li class="list-group-item"><strong>Promedio de descuento:</strong> <%= promedioDescuento.toFixed(2) %> %</li>
+            <li class="list-group-item"><strong>Total Valor Venta:</strong> <%= totalValorVenta.toLocaleString(undefined, {minimumFractionDigits: 2}) %></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="/scripts.js"></script>
+</body>
+</html>

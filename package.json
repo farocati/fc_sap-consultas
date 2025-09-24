@@ -1,0 +1,13 @@
+{
+  "name": "fc-sap-consultas",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@sap/hana-client": "^2.11.24",
+    "ejs": "^3.1.9"
+  }
+}
