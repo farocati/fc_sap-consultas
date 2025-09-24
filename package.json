@@ -1,5 +1,5 @@
 {
-  "name": "fc-sap-consultas",
+  "name": "fc_sap-consultas",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
