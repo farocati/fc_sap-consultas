@@ -1,0 +1,170 @@
+<!-- views/cierre_diario.ejs -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>💰 Cierre Diario de Caja</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css">
+  <style>
+    .filters { background: white; padding: 25px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .table th, .table td { vertical-align: middle; }
+    .total-row { background-color: #003366; color: white; font-weight: bold; }
+    .subtotals { background-color: #e9ecef; font-weight: bold; }
+    .summary-box {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .summary-item {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+    .summary-label { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>💰 Cierre Diario de Caja</h1>
+      <a href="/" class="btn btn-outline-primary">← Volver al inicio</a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters">
+      <form method="GET" class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Fecha</label>
+          <input type="date" name="fecha" class="form-control" value="<%= fechaSeleccionada %>" required>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Tiendas (opcional)</label>
+          <div>
+            <% tiendasDisponibles.forEach(tienda => { %>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="tiendas" value="<%= tienda.BeginStr %>" <%= tList.includes(tienda.BeginStr) ? 'checked' : '' %> id="tienda_<%= tienda.BeginStr %>">
+                <label class="form-check-label" for="tienda_<%= tienda.BeginStr %>"><%= tienda.SeriesName %></label>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Filtrar</button>
+          <button type="button" class="btn btn-success" onclick="exportarExcel()">Exportar a Excel</button>
+          <button type="button" class="btn btn-secondary" onclick="imprimir()">Imprimir</button>
+          <button type="button" class="btn btn-danger" onclick="exportarPDF()">Exportar a PDF</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Cuadro resumen -->
+    <% if (pagos && Object.keys(pagos).length > 0) { %>
+    <div class="summary-box">
+      <h5>📊 Resumen por Tipo de Pago</h5>
+      <% Object.keys(pagos).forEach(tipo => { %>
+        <div class="summary-item">
+          <span class="summary-label"><%= tipo %>:</span>
+          <span><%= parseFloat(totales[tipo] || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) %></span>
+        </div>
+      <% }) %>
+      <hr>
+      <div class="summary-item">
+        <span class="summary-label">TOTAL GENERAL:</span>
+        <span><%= parseFloat(totalGeneral || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) %></span>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Tabla de Resultados -->
+    <div class="table-responsive">
+      <table id="tablaReporte" class="table table-striped table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>Tipo</th>
+            <th>Grupo Cobro</th>
+            <th>Sucursal</th>
+            <th>N° Pago</th>
+            <th>Factura</th>
+            <th>Fecha Pago</th>
+            <th>Cliente</th>
+            <th class="text-end">Importe</th>
+            <th>Banco</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (pagos && Object.keys(pagos).length > 0) { %>
+            <% Object.keys(pagos).forEach(tipo => { %>
+              <% pagos[tipo].forEach(row => { %>
+                <tr>
+                  <td><%= row.Tipo || '' %></td>
+                  <td><%= row.GrupoCobro || '' %></td>
+                  <td><%= row.SeriesName || '' %></td>
+                  <td><%= row.NumPago || row.DocNum || '' %></td>
+                  <td><%= row.Fact || '' %></td>
+                  <td><%= row.FechaPago || '' %></td>
+                  <td><%= row.CardName || '' %></td>
+                  <td class="text-end"><%= parseFloat(row.Importe || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) %></td>
+                  <td><%= row.Banco || row.BankName || '' %></td>
+                </tr>
+              <% }) %>
+              <!-- ✅ Subtotal: 9 celdas reales -->
+              <tr class="subtotals">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="text-end"><strong>Subtotal <%= tipo %></strong></td>
+                <td class="text-end"><strong><%= parseFloat(totales[tipo] || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) %></strong></td>
+                <td></td>
+              </tr>
+            <% }) %>
+            <!-- ✅ Total General: 9 celdas reales -->
+            <tr class="total-row">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="text-end"><strong>TOTAL GENERAL</strong></td>
+              <td class="text-end"><strong><%= parseFloat(totalGeneral || 0).toLocaleString('es-ES', { minimumFractionDigits: 2 }) %></strong></td>
+              <td></td>
+            </tr>
+          <% } else { %>
+            <!-- ✅ "No hay resultados": 9 celdas reales -->
+            <tr>
+              <td colspan="9" class="text-center">No se encontraron resultados.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="/scripts.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      $('#tablaReporte').DataTable({
+        pageLength: 25,
+        responsive: true,
+        language: {
+          url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+        },
+        dom: 'Bfrtip',
+        buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+      });
+    });
+  </script>
+</body>
+</html>

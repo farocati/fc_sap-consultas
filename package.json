@@ -1,0 +1,22 @@
+{
+  "name": "sap-inventory-api",
+  "version": "1.0.0",
+  "description": "API para mostrar inventario de SAP B1 HANA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@sap/hana-client": "^2.26.18",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.2",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.1.0",
+    "joi": "^18.0.1",
+    "winston": "^3.17.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
